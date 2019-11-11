@@ -1,0 +1,80 @@
+#
+# Travis CI config is only for Ubuntu environment
+#
+
+git:
+  submodules: true
+  depth: 3
+
+language: cpp
+
+cache:
+  directories:
+    - ${HOME}/vcpkg/installed
+
+# sudo: required
+
+matrix:
+  include:
+    - os: linux
+      dist: xenial
+      name: Ubuntu 16.04
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-xenial-8
+          packages:
+            - clang-8
+            - libc++abi-8-dev
+            - libc++-8-dev
+            - tree
+            - g++-7
+
+    - os: linux
+      dist: bionic
+      name: Ubuntu 18.04
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-bionic-8
+          packages:
+            - clang-8
+            - libc++abi-8-dev
+            - libc++-8-dev
+            - tree
+
+before_install:
+  - export CC=gcc-7 CXX=g++-7
+install:
+  - | # replace cmake
+    sudo rm -rf $(which cmake)
+    sudo bash ./scripts/install-cmake-3.15.sh
+    echo $(which cmake)
+  - | # prepare vcpkg
+    mkdir -p ${HOME}/vcpkg
+    pushd ${HOME}/vcpkg
+    git init
+    git remote add origin https://github.com/Microsoft/vcpkg.git
+    git fetch origin 2019.08
+    git checkout FETCH_HEAD
+    ./bootstrap-vcpkg.sh
+
+before_script:
+  - export CC=clang-8 CXX=clang-8
+  # triplet customization
+  - cp ${TRAVIS_BUILD_DIR}/x64-linux.cmake ./triplets/x64-linux.cmake
+script:
+  # install required packages
+  - ./vcpkg install protobuf ms-gsl fmt catch2
+  - ./vcpkg install openssl[core] c-ares[core] zlib[core]
+  - export LD_LIBRARY_PATH="$(pwd)/installed/x64-linux/lib"
+  - ./vcpkg install grpc
+  - popd
+  - mkdir -p build && pushd build
+  - cmake ..
+    -DCMAKE_TOOLCHAIN_FILE="${HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  # codegen and build
+  - cmake --build . --target run_protoc_cpp
+  - cmake --build . --config debug
