@@ -1,5 +1,11 @@
 # C++ Service Template
 
+[![Build Status](https://travis-ci.com/AlcheraInc/cpp-service-template.svg?branch=master)](https://travis-ci.com/AlcheraInc/cpp-service-template)
+
+Basic setup for service prototyping in Alchera Inc.
+
+* gRPC Async Server Example (No operation)
+
 ### References
 
 * https://grpc.io
